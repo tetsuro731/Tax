@@ -17,6 +17,7 @@ class Tax:
         # 健康保険料率. デフォルトは東京の場合は9.87%
         self.health_insurance_premium_rate = health_insurance_premium_rate
 
+        self.income_tax_rate = 0 #income()で代入する. ふるさと納税の計算で使い回す
         self.income = self.income() #incomeは何度も使うので変数に入れておく
 
     def income(self):
@@ -106,35 +107,35 @@ class Tax:
                                 - basic_deduction)
         # 年収別の所得税率と控除額
         if target_of_income_tax < 1950000:
-            income_tax_rate = 0.05
+            self.income_tax_rate = 0.05
             deduction = 0
 
         elif target_of_income_tax < 3300000:
-            income_tax_rate = 0.1
+            self.income_tax_rate = 0.1
             deduction = 97500
 
         elif target_of_income_tax < 6950000:
-            income_tax_rate = 0.2
+            self.income_tax_rate = 0.2
             deduction = 427500
 
         elif target_of_income_tax < 9000000:
-            income_tax_rate = 0.23
+            self.income_tax_rate = 0.23
             deduction = 636000
 
         elif target_of_income_tax < 18000000:
-            income_tax_rate = 0.33
+            self.income_tax_rate = 0.33
             deduction = 1536000
 
         elif target_of_income_tax < 40000000:
-            income_tax_rate = 0.40
+            self.income_tax_rate = 0.40
             deduction = 2796000
 
         else:
-            income_tax_rate = 0.45
+            self.income_tax_rate = 0.45
             deduction = 479.6
 
         # 所得税の計算
-        income_tax = target_of_income_tax*income_tax_rate - deduction
+        income_tax = target_of_income_tax * self.income_tax_rate - deduction
         # 所得税がマイナスにになった場合はゼロにする
         if income_tax <= 0:
             income_tax = 0
@@ -158,7 +159,7 @@ class Tax:
         elif self.income < 25000000:
             basic_deduction = 150000
 
-        # 所得から各種控除、基礎控除（33万円）を引き、税率10%をかける
+        # 所得から各種控除、基礎控除（43万円）を引き、税率10%をかける
         # さらに均等割5000円を足して、調整控除2500円を引く
         inhabitant_tax = (self.income
                           - self.social_insurance_premium()
@@ -180,3 +181,16 @@ class Tax:
         net_salary = self.gross_salary - total_tax - self.social_insurance_premium()
         return net_salary
 
+    def max_hurusato_donation(self):
+        """
+        ふるさと納税で自己負担2000円で全額控除される上限の計算
+        言い換えるとreturnの金額から2000円引いたものが所得税および住民税から控除される
+        """
+        # 住民税所得割額(=住民税)から計算する
+        # ふるさと納税控除額の上限
+        hurusato_deduction = self.inhabitant_tax() * 0.2
+
+        # (控除金額) =（寄附金額-2000）×（90％-所得税の税率×1.021）
+        # (寄付金額) = (控除金額)/(90％-所得税の税率×1.021)+2000
+        max_hurusato_donation = hurusato_deduction / (0.9 - self.income_tax_rate * 1.021) + 2000
+        return max_hurusato_donation
